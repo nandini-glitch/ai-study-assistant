@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 AI Study Assistant</h1>
+            <p>Powered by Gemini 2.5 Flash</p>
+        </header>
+
+        <div class="upload-section">
+            <h2>📤 Upload Materials</h2>
+            
+            <div class="upload-card">
+                <h3>📄 Document (PDF/TXT)</h3>
+                <input type="file" id="documentInput" accept=".pdf,.txt">
+                <button onclick="uploadDocument()">Upload</button>
+                <div id="documentStatus" class="status"></div>
+            </div>
+
+            <div class="upload-card">
+                <h3>🖼️ Image/Diagram</h3>
+                <input type="file" id="imageInput" accept="image/*">
+                <button onclick="uploadImage()">Upload</button>
+                <div id="imageStatus" class="status"></div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="summary-btn" onclick="generateSummary()">📝 Summary</button>
+                <button class="clear-btn" onclick="clearMaterials()">🗑️ Clear</button>
+            </div>
+        </div>
+
+        <div class="question-section">
+            <h2>💬 Ask Questions</h2>
+            
+            <textarea id="questionInput" placeholder="Type your question..." rows="3"></textarea>
+            <button onclick="askQuestion()">Ask</button>
+
+            <div class="voice-section">
+                <h3>🎤 Or Use Voice</h3>
+                <input type="file" id="audioInput" accept="audio/*">
+                <button onclick="uploadAudio()">Upload Audio</button>
+                <div id="audioStatus" class="status"></div>
+            </div>
+        </div>
+
+        <div class="answer-section" id="answerSection" style="display: none;">
+            <h2>💡 Answer</h2>
+            <div id="answerContent" class="answer-box"></div>
+            <button class="speak-btn" onclick="speakAnswer()">🔊 Read Aloud</button>
+            <audio id="audioPlayer" controls style="display: none;"></audio>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
