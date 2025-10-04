@@ -1,0 +1,27 @@
+services:
+  # Backend API
+  - type: web
+    name: ai-study-assistant
+    env: python
+    region: oregon
+    plan: free
+    runtime: python
+    buildCommand: |
+      cd backend
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+
+  # Frontend Static Site
+  - type: web
+    name: ai-study-assistant-frontend
+    env: static
+    region: oregon
+    plan: free
+    buildCommand: echo "Static site ready"
+    staticPublishPath: ./frontend
