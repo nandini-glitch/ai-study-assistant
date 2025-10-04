@@ -17,7 +17,11 @@ app = Flask(__name__)
 # CORS Configuration - Allow all origins for now (restrict in production)
 CORS(app, resources={
     r"/*": {
-        "origins": "*",  # Change to your frontend URL in production
+        "origins": [
+            "https://ai-study-assistant-frontend.onrender.com",
+            "http://localhost:8000",
+            "http://127.0.0.1:5500"
+        ],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
