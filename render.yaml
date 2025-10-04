@@ -2,8 +2,10 @@ services:
   - type: web
     name: ai-study-assistant
     env: python
+    region: oregon
+    plan: free
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && python app.py
+    startCommand: python backend/app.py
     envVars:
       - key: GEMINI_API_KEY
         sync: false
