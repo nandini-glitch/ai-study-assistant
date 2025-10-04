@@ -13,16 +13,26 @@ from utils.image_analyzer import analyze_image
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# CORS Configuration - Allow all origins for now (restrict in production)
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",  # Change to your frontend URL in production
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
 gemini_api_key = os.getenv('GEMINI_API_KEY')
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
+else:
+    print("WARNING: GEMINI_API_KEY not found!")
 
 study_materials = {
     'text_content': "",
@@ -35,8 +45,13 @@ study_materials = {
 def home():
     return jsonify({
         "message": "AI Study Assistant (Gemini 2.5 Flash)",
-        "status": "active"
+        "status": "active",
+        "version": "1.0"
     })
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy"}), 200
 
 @app.route('/upload/document', methods=['POST'])
 def upload_document():
@@ -267,5 +282,9 @@ def clear_materials():
         "message": "All materials cleared"
     })
 
+# PRODUCTION CONFIGURATION
 if __name__ == '__main__':
-    app.run(debug=True, port=5001, host='0.0.0.0')
+    # Get port from environment variable (Render provides this)
+    port = int(os.environ.get('PORT', 5001))
+    # debug=False for production
+    app.run(debug=False, port=port, host='0.0.0.0')

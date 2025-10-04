@@ -1,4 +1,8 @@
-const API_URL = 'http://localhost:5001';
+// Auto-detect environment and set API URL
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5001'  // Local development
+    : 'https://YOUR-APP-NAME.onrender.com';  // Production - UPDATE THIS AFTER DEPLOYMENT
+
 let currentAnswer = '';
 
 function showLoading() {
@@ -37,6 +41,7 @@ async function uploadDocument() {
             method: 'POST',
             body: formData
         });
+        
         const data = await response.json();
         
         if (response.ok && data.success) {
@@ -69,12 +74,11 @@ async function uploadImage() {
             method: 'POST',
             body: formData
         });
+        
         const data = await response.json();
         
         if (response.ok && data.success) {
-            // Limit display length for analysis
-            const partial = data.analysis ? data.analysis.substring(0, 150) : '';
-            showStatus('imageStatus', `${data.message}\n${partial}...`);
+            showStatus('imageStatus', `${data.message}\n${data.analysis.substring(0, 150)}...`);
             fileInput.value = '';
         } else {
             showStatus('imageStatus', `✗ ${data.error}`, true);
@@ -103,12 +107,12 @@ async function uploadAudio() {
             method: 'POST',
             body: formData
         });
+        
         const data = await response.json();
         
         if (response.ok && data.success) {
             showStatus('audioStatus', `✓ ${data.message}`);
-            // Put transcription into question input
-            document.getElementById('questionInput').value = data.transcription || '';
+            document.getElementById('questionInput').value = data.transcription;
             fileInput.value = '';
         } else {
             showStatus('audioStatus', `✗ ${data.error}`, true);
@@ -121,18 +125,21 @@ async function uploadAudio() {
 
 async function askQuestion() {
     const question = document.getElementById('questionInput').value.trim();
+    
     if (!question) {
         alert('Enter a question');
         return;
     }
     
     showLoading();
+    
     try {
         const response = await fetch(`${API_URL}/ask`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question })
         });
+        
         const data = await response.json();
         
         if (response.ok && data.success) {
@@ -157,6 +164,7 @@ async function speakAnswer() {
     }
     
     showLoading();
+    
     try {
         const response = await fetch(`${API_URL}/speak`, {
             method: 'POST',
@@ -182,10 +190,9 @@ async function speakAnswer() {
 
 async function generateSummary() {
     showLoading();
+    
     try {
-        const response = await fetch(`${API_URL}/summary`, {
-            method: 'POST'
-        });
+        const response = await fetch(`${API_URL}/summary`, { method: 'POST' });
         const data = await response.json();
         
         if (response.ok && data.success) {
@@ -207,16 +214,20 @@ async function clearMaterials() {
     if (!confirm('Clear all materials?')) return;
     
     showLoading();
+    
     try {
-        const response = await fetch(`${API_URL}/clear`, {
-            method: 'POST'
-        });
+        const response = await fetch(`${API_URL}/clear`, { method: 'POST' });
         const data = await response.json();
         
         if (response.ok && data.success) {
             alert(data.message);
             document.getElementById('questionInput').value = '';
             document.getElementById('answerSection').style.display = 'none';
+            currentAnswer = '';
+            ['documentStatus', 'imageStatus', 'audioStatus'].forEach(id => {
+                document.getElementById(id).textContent = '';
+                document.getElementById(id).className = 'status';
+            });
         } else {
             alert(`Error: ${data.error}`);
         }
@@ -225,3 +236,23 @@ async function clearMaterials() {
     }
     hideLoading();
 }
+
+document.getElementById('questionInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        askQuestion();
+    }
+});
+
+// Check API connection on load
+window.addEventListener('load', async () => {
+    console.log('Connecting to API:', API_URL);
+    try {
+        const response = await fetch(`${API_URL}/health`);
+        const data = await response.json();
+        console.log('API Status:', data);
+    } catch (error) {
+        console.error('Cannot connect to API:', error);
+        alert('Warning: Cannot connect to backend. Make sure the server is running.');
+    }
+});
