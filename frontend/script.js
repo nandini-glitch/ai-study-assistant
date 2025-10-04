@@ -1,7 +1,7 @@
 // Auto-detect environment and set API URL
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5001'  // Local development
-    : 'https://YOUR-APP-NAME.onrender.com';  // Production - UPDATE THIS AFTER DEPLOYMENT
+    : 'https://ai-study-assistant-mk69.onrender.com';  // Production - UPDATE THIS AFTER DEPLOYMENT
 
 let currentAnswer = '';
 
