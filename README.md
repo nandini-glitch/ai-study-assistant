@@ -1,4 +1,4 @@
-# ai-study-assistant
+# AI-study-assistant
 A multimodal web application using Google Gemini 2.5 Flash that helps students study by
 processing text, images, and audio to answer questions intelligently.
 
