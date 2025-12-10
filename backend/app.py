@@ -9,6 +9,7 @@ import tempfile
 
 from utils.document_processor import extract_text_from_pdf, extract_text_from_txt
 from utils.image_analyzer import analyze_image
+from utils.rag_handler import RAGSystem
 
 load_dotenv()
 
@@ -41,6 +42,13 @@ study_materials = {
     'images': [],
     'uploaded_files': []
 }
+# Initialize RAG System
+try:
+    rag_system = RAGSystem()
+    print("✓ RAG system initialized successfully")
+except Exception as e:
+    print(f"✗ Error initializing RAG: {e}")
+    rag_system = None
 
 @app.route('/')
 def home():
@@ -80,6 +88,7 @@ def upload_document():
             os.remove(filepath)
             return jsonify({"error": "No text extracted"}), 400
         
+        # Store in memory (for backward compatibility)
         study_materials['text_content'] += f"\n\n--- {file.filename} ---\n{text}"
         study_materials['uploaded_files'].append({
             'filename': file.filename,
@@ -87,16 +96,24 @@ def upload_document():
             'type': 'document'
         })
         
+        # ADD TO RAG SYSTEM
+        chunks_created = 0
+        if rag_system:
+            chunks_created = rag_system.add_document(text, file.filename)
+        
         return jsonify({
             "success": True,
-            "message": f"✓ '{file.filename}' uploaded!",
+            "message": f"✓ '{file.filename}' uploaded and indexed!",
             "filename": file.filename,
-            "text_length": len(text)
+            "text_length": len(text),
+            "chunks_created": chunks_created,
+            "rag_enabled": rag_system is not None
         })
     except Exception as e:
         if os.path.exists(filepath):
             os.remove(filepath)
         return jsonify({"error": str(e)}), 500
+
 
 @app.route('/upload/image', methods=['POST'])
 def upload_image():
@@ -179,15 +196,49 @@ def upload_audio():
 def ask_question():
     data = request.json
     question = data.get('question', '')
+    use_rag = data.get('use_rag', True)  # Enable RAG by default
     
     if not question:
         return jsonify({"error": "No question provided"}), 400
     
-    context = "You are a helpful AI study assistant.\n\n=== STUDY MATERIALS ===\n\n"
+    context = "You are a helpful AI study assistant.\n\n"
+    sources = []
     
-    if study_materials['text_content']:
-        context += "TEXT NOTES:\n" + study_materials['text_content'] + "\n\n"
+    # Use RAG if available and enabled
+    if rag_system and use_rag:
+        try:
+            # Search for relevant chunks
+            search_results = rag_system.search(question, n_results=5)
+            
+            if search_results['documents']:
+                context += "=== RELEVANT STUDY MATERIALS (RAG) ===\n\n"
+                
+                for i, (doc, meta, dist) in enumerate(zip(
+                    search_results['documents'],
+                    search_results['metadatas'],
+                    search_results.get('distances', [0]*len(search_results['documents']))
+                )):
+                    context += f"[Chunk {i+1} from {meta['filename']}]\n{doc}\n\n"
+                    if meta['filename'] not in sources:
+                        sources.append(meta['filename'])
+            else:
+                # Fallback to traditional method
+                context += "=== STUDY MATERIALS (No RAG results) ===\n\n"
+                if study_materials['text_content']:
+                    context += "TEXT NOTES:\n" + study_materials['text_content'] + "\n\n"
+        
+        except Exception as e:
+            print(f"RAG search error: {e}")
+            # Fallback to traditional method
+            if study_materials['text_content']:
+                context += "TEXT NOTES:\n" + study_materials['text_content'] + "\n\n"
+    else:
+        # Traditional method (no RAG)
+        context += "=== STUDY MATERIALS ===\n\n"
+        if study_materials['text_content']:
+            context += "TEXT NOTES:\n" + study_materials['text_content'] + "\n\n"
     
+    # Add image analyses
     if study_materials['image_analyses']:
         context += "IMAGE ANALYSES:\n"
         for img in study_materials['image_analyses']:
@@ -196,7 +247,7 @@ def ask_question():
     if not study_materials['text_content'] and not study_materials['image_analyses']:
         context = "No study materials uploaded. Answer based on general knowledge if appropriate."
     
-    context += f"\n=== QUESTION ===\n{question}\n\nProvide a clear, educational answer."
+    context += f"\n=== QUESTION ===\n{question}\n\nProvide a clear, educational answer based on the materials above."
     
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
@@ -205,7 +256,9 @@ def ask_question():
         return jsonify({
             "success": True,
             "question": question,
-            "answer": response.text
+            "answer": response.text,
+            "sources": sources,
+            "rag_used": rag_system is not None and use_rag
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -278,10 +331,34 @@ def clear_materials():
     
     study_materials['uploaded_files'] = []
     
+    # Clear RAG system
+    if rag_system:
+        try:
+            rag_system.clear_all()
+        except Exception as e:
+            print(f"Error clearing RAG: {e}")
+    
     return jsonify({
         "success": True,
-        "message": "All materials cleared"
+        "message": "All materials cleared (including RAG index)"
     })
+
+#for rag status
+@app.route('/rag/stats', methods=['GET'])
+def get_rag_stats():
+    """Get RAG system statistics"""
+    if not rag_system:
+        return jsonify({"error": "RAG system not initialized"}), 503
+    
+    try:
+        stats = rag_system.get_stats()
+        return jsonify({
+            "success": True,
+            "stats": stats,
+            "rag_available": True
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # PRODUCTION CONFIGURATION
 if __name__ == '__main__':

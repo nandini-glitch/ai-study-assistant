@@ -16,6 +16,11 @@ services:
         sync: false
       - key: PYTHON_VERSION
         value: "3.11.9"
+    # Add persistent disk for ChromaDB
+    disk:
+      name: chroma-storage
+      mountPath: /opt/render/project/src/backend/chroma_db
+      sizeGB: 1
 
   # Frontend Static Site
   - type: web
