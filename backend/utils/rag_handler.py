@@ -14,9 +14,10 @@ class RAGSystem:
             raise ValueError("GEMINI_API_KEY not found")
         genai.configure(api_key=api_key)
         
+        
         # Initialize ChromaDB client
         self.client = chromadb.Client(Settings(
-            persist_directory="./chroma_db",
+            persist_directory="/opt/render/project/src/backend/chroma_db",
             anonymized_telemetry=False
         ))
         
